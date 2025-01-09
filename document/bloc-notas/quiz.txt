@@ -1,0 +1,93 @@
+
+<?php
+session_start();
+
+// Configuración de la base de datos
+$dsn = "mysql:host=localhost;dbname=quiz_db;charset=utf8mb4";
+$usuario = "root"; // Cambia esto por tu usuario
+$clave = ""; // Cambia esto por tu contraseña
+
+try {
+    $conexion = new PDO($dsn, $usuario, $clave);
+} catch (PDOException $error) {
+    echo "Error: " . $error->getMessage();
+}
+
+// Inicializar puntuación
+if (!isset($_SESSION['puntuacion'])) {
+    $_SESSION['puntuacion'] = 0;
+}
+
+// Manejo de respuestas
+if (isset($_POST['respuesta'])) {
+    if ($_POST['respuesta'] == $_SESSION['respuesta_correcta']) {
+        $_SESSION['puntuacion'] += 10;
+        $mensaje_feedback = "¡Correcto!";
+    } else {
+        $mensaje_feedback = "Incorrecto. La respuesta correcta era: " . $_SESSION['respuesta_correcta'];
+    }
+} else {
+    $mensaje_feedback = "";
+}
+
+// Obtener preguntas aleatorias
+$query = $conexion->query("SELECT * FROM questions ORDER BY RAND() LIMIT 5");
+$preguntas = $query->fetchAll(PDO::FETCH_ASSOC);
+
+$pregunta_actual = isset($_POST['pregunta_actual']) ? (int)$_POST['pregunta_actual'] : 0;
+
+if ($pregunta_actual < count($preguntas)) {
+    $_SESSION['respuesta_correcta'] = $preguntas[$pregunta_actual]['correct_option'];
+} else {
+    echo "<h2>Tu puntuación final es: " . $_SESSION['puntuacion'] . "</h2>";
+    echo '<a href="quiz.php" style="text-decoration: none;"><button type="button">Volver a jugar </button></a>';
+
+    session_destroy();
+    exit;
+}
+?>
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Juego de Preguntas</title>
+</head>
+<body>
+    <h1>Juego de Preguntas</h1>
+    <h2>Puntuación: <?php echo $_SESSION['puntuacion']; ?></h2>
+
+    
+    <?php if ($mensaje_feedback): ?>
+        <p><?php echo $mensaje_feedback; ?></p>
+    <?php endif; ?>
+
+    <div>
+    <p>Tiempo restante: <span id="contador">120</span> segundos</p>
+    </div>
+
+    <form method="post">
+        <h3><?php echo $preguntas[$pregunta_actual]['question']; ?></h3>
+        <input type="radio" name="respuesta" value="A" required><?php echo $preguntas[$pregunta_actual]['option_a']; ?><br>
+        <input type="radio" name="respuesta" value="B"><?php echo $preguntas[$pregunta_actual]['option_b']; ?><br>
+        <input type="radio" name="respuesta" value="C"><?php echo $preguntas[$pregunta_actual]['option_c']; ?><br>
+        <input type="radio" name="respuesta" value="D"><?php echo $preguntas[$pregunta_actual]['option_d']; ?><br>
+        
+        <input type="hidden" name="pregunta_actual" value="<?php echo $pregunta_actual + 1; ?>">
+        <button type="submit">Enviar Respuesta</button>
+    </form>
+
+    <script>
+    let tiempo = 1800;
+    const temporizador = setInterval(() => {
+        if (tiempo <= 0) {
+            clearInterval(temporizador);
+            alert("Se acabó el tiempo!");
+            document.getElementById("formulario").submit(); 
+        }
+        document.getElementById("contador").innerText = tiempo;
+        tiempo--;
+    }, 1000);
+</script>
+</body>
+</html>

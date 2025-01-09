@@ -1,0 +1,48 @@
+<?php 
+session_start();
+include_once "conexion.php";
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Captura el nombre ingresado por el usuario
+    $nombre_usuario = htmlspecialchars($_POST['nombre']);
+    $_SESSION['nombre'] = $nombre_usuario;
+
+    // Verifica si el usuario ya existe
+    $check_sql = "SELECT * FROM usuarios WHERE usuario = ?";
+    $stmt = $conn->prepare($check_sql);
+    $stmt->bind_param("s", $nombre_usuario);
+    $stmt->execute();
+    $resultado = $stmt->get_result();
+
+    if ($resultado->num_rows > 0) {
+        // El usuario ya existe
+        echo "<h1>Error: El nombre de usuario '{$nombre_usuario}' ya está en uso.</h1>";
+        echo "<p><a href='index.php'>Volver a intentar</a></p>";
+    } else {
+        // Inserta el nuevo usuario
+        $insert_sql = "INSERT INTO usuarios (usuario, clave) VALUES (?, ?)";
+        $clave = password_hash("default_password", PASSWORD_DEFAULT);
+
+        $insert_stmt = $conn->prepare($insert_sql);
+        $insert_stmt->bind_param("ss", $nombre_usuario, $clave);
+        
+        if ($insert_stmt->execute()) {
+            echo "<h1>Bienvenido, {$nombre_usuario}!</h1>";
+            echo "<p>Gracias por registrarte.</p>";
+        } else {
+            echo "Error al registrar: " . $insert_stmt->error;
+        }
+        
+        $insert_stmt->close();
+    }
+
+    $stmt->close();
+} else {
+    header("Location: index.php");
+    exit();
+}
+?>
+
+codigo para mostrar el nombre del usuario <?php 
+          echo "<h1> $usuario </h1>";
+      ?> 
